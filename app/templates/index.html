@@ -99,6 +99,13 @@
             <label class="required">주제</label>
             <input name="topic" id="topicInput" required placeholder="예: 한국은행 신입 행원을 위한 4시간 AI 활용 교육">
 
+            <label>참고 자료 업로드 (선택)</label>
+            <div class="file-upload-zone" onclick="document.getElementById('refFileInput').click()" style="margin-bottom:8px;">
+                <p style="font-size:13px;">Word, Excel, PDF, 텍스트 파일을 업로드하면 내용이 반영됩니다</p>
+                <input type="file" id="refFileInput" name="ref_files" multiple accept=".docx,.xlsx,.pdf,.txt,.csv,.hwp" style="display:none" onchange="showRefFiles(this)">
+            </div>
+            <div id="refFileList" style="margin-bottom:16px;"></div>
+
             <label>추가 지시사항</label>
             <textarea name="extra_info" placeholder="예: 강사명은 홍길동으로 변경, 텍스트를 더 전문적인 용어로 작성해 주세요"></textarea>
 
@@ -144,6 +151,14 @@
     <script>
     let selectedTemplate = null;
     let pollingInterval = null;
+
+    function showRefFiles(input) {
+        const list = document.getElementById('refFileList');
+        if (!input.files.length) { list.innerHTML = ''; return; }
+        list.innerHTML = Array.from(input.files).map(f =>
+            `<div class="file-item"><span class="file-name">${f.name}</span><span class="file-size">${(f.size/1024).toFixed(1)}KB</span></div>`
+        ).join('');
+    }
 
     // 템플릿 목록 로드
     async function loadTemplates() {

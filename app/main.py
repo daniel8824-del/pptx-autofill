@@ -16,6 +16,7 @@ from fastapi import FastAPI, Request, Form, BackgroundTasks, UploadFile, File
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from typing import Optional
 
 from app.pptx_engine import (
     unpack, repack, analyze_template, analyze_template_summary,
@@ -86,6 +87,21 @@ async def delete_template(source: str, filename: str):
     return {"status": "ok"}
 
 
+def extract_file_text(file_path: str) -> str:
+    """업로드된 참고 파일에서 텍스트 추출 (markitdown 활용)"""
+    try:
+        from markitdown import MarkItDown
+        md = MarkItDown()
+        result = md.convert(file_path)
+        return result.text_content[:5000]  # 토큰 절약
+    except Exception:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return f.read()[:5000]
+        except Exception:
+            return ""
+
+
 @app.post("/api/start")
 async def start_generation(
     background_tasks: BackgroundTasks,
@@ -93,6 +109,7 @@ async def start_generation(
     template_filename: str = Form(...),
     topic: str = Form(...),
     extra_info: str = Form(""),
+    ref_files: list[UploadFile] = File([]),
 ):
     job_id = str(uuid.uuid4())[:8]
 
@@ -111,6 +128,21 @@ async def start_generation(
     work_template = project_dir / "template.pptx"
     shutil.copy2(template_path, work_template)
 
+    # 참고 파일 저장 + 텍스트 추출
+    ref_texts = []
+    for ref in ref_files:
+        if ref and ref.filename and ref.size > 0:
+            ext = os.path.splitext(ref.filename)[1] or ".txt"
+            ref_path = os.path.join(str(project_dir), f"ref_{ref.filename}")
+            with open(ref_path, "wb") as f:
+                content = await ref.read()
+                f.write(content)
+            text = extract_file_text(ref_path)
+            if text.strip():
+                ref_texts.append(f"[파일: {ref.filename}]\n{text}")
+
+    ref_context = "\n\n".join(ref_texts) if ref_texts else ""
+
     jobs[job_id] = {
         "status": "running",
         "phase": "준비 중...",
@@ -119,6 +151,7 @@ async def start_generation(
         "template_path": str(work_template),
         "topic": topic,
         "extra_info": extra_info,
+        "ref_context": ref_context,
         "content_map": None,
         "analysis": None,
         "original_text": None,
@@ -152,8 +185,13 @@ async def run_pipeline(job_id: str):
         job["progress"] = 25
         await asyncio.sleep(0.1)
 
+        # 참고 파일 내용이 있으면 extra_info에 합산
+        full_extra = job["extra_info"]
+        if job.get("ref_context"):
+            full_extra += f"\n\n## 참고 자료 (업로드 파일 내용)\n{job['ref_context']}"
+
         content_map = await generate_content_map(
-            analysis, job["original_text"], job["topic"], job["extra_info"]
+            analysis, job["original_text"], job["topic"], full_extra
         )
         job["content_map"] = content_map
         job["progress"] = 60
