@@ -93,7 +93,7 @@ def extract_file_text(file_path: str) -> str:
         from markitdown import MarkItDown
         md = MarkItDown()
         result = md.convert(file_path)
-        return result.text_content[:5000]  # 토큰 절약
+        return result.text_content[:3000]  # 토큰 절약 (3000자 상한)
     except Exception:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
