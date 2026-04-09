@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPTX 자동 채우기</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f8f9fa; color: #28251D; }
+
+        .header { background: #01696F; color: white; padding: 24px 0; }
+        .header h1 { max-width: 900px; margin: 0 auto; padding: 0 20px; font-size: 24px; }
+        .header p { max-width: 900px; margin: 4px auto 0; padding: 0 20px; opacity: 0.8; font-size: 14px; }
+
+        .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
+
+        .card { background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 24px; }
+        .card h2 { color: #01696F; font-size: 18px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #E8F5F5; }
+
+        label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; color: #333; }
+        .required::after { content: " *"; color: #e74c3c; }
+        input, textarea, select { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 16px; font-family: inherit; }
+        textarea { min-height: 80px; resize: vertical; }
+        input:focus, textarea:focus { outline: none; border-color: #01696F; box-shadow: 0 0 0 3px rgba(44,62,80,0.1); }
+
+        .btn { background: #01696F; color: white; border: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s; }
+        .btn:hover { background: #015258; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        .btn-secondary { background: #E8F5F5; color: #01696F; border: 1px solid #01696F; }
+        .btn-secondary:hover { background: #01696F; color: white; }
+
+        /* 템플릿 갤러리 */
+        .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .template-card { border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; }
+        .template-card:hover { border-color: #01696F; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .template-card.selected { border-color: #01696F; background: #E8F5F5; }
+        .template-card.selected::after { content: "✓"; position: absolute; top: 10px; right: 10px; background: #01696F; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+        .template-card .name { font-weight: 700; font-size: 15px; margin-bottom: 8px; color: #01696F; }
+        .template-card .meta { font-size: 12px; color: #888; }
+        .template-card .meta span { display: inline-block; background: #E8F5F5; padding: 2px 8px; border-radius: 4px; margin-right: 6px; margin-top: 4px; }
+        .template-card .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; margin-bottom: 8px; }
+        .badge-sample { background: #E8F5E9; color: #2E7D32; }
+        .badge-upload { background: #E3F2FD; color: #1565C0; }
+        .template-card .delete-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 18px; display: none; }
+        .template-card:hover .delete-btn { display: block; }
+        .template-card.selected .delete-btn { display: none; }
+
+        /* 업로드 존 */
+        .upload-zone { border: 2px dashed #ccc; border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 16px; }
+        .upload-zone:hover { border-color: #01696F; background: #E8F5F5; }
+        .upload-zone p { color: #888; font-size: 14px; }
+        .upload-zone .icon { font-size: 32px; margin-bottom: 8px; }
+
+        /* 진행률 */
+        .progress-section { display: none; }
+        .progress-bar { background: #E8F5F5; border-radius: 8px; overflow: hidden; height: 8px; margin: 12px 0; }
+        .progress-fill { background: #01696F; height: 100%; transition: width 0.5s; width: 0%; }
+        .phase-text { font-size: 14px; color: #666; margin-top: 8px; }
+        .progress-pct { font-size: 24px; font-weight: 700; color: #01696F; }
+
+        /* 결과 */
+        .result-section { display: none; }
+        .download-btn { display: inline-block; background: #01696F; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; }
+        .download-btn:hover { background: #015258; }
+        .result-info { background: #E8F5F5; border-radius: 8px; padding: 16px; margin-bottom: 16px; font-size: 14px; color: #555; }
+
+        .error-msg { background: #FFF3F3; border: 1px solid #e74c3c; border-radius: 8px; padding: 16px; color: #c0392b; display: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PPTX 자동 채우기</h1>
+        <p>기존 PPTX 템플릿의 레이아웃을 유지하면서 새로운 주제로 내용을 자동 교체합니다</p>
+    </div>
+
+    <div class="container">
+        <!-- 1. 템플릿 선택 -->
+        <div class="card" id="templateCard">
+            <h2>1. 템플릿 선택</h2>
+            <div class="template-grid" id="templateGrid">
+                <div style="color:#888; grid-column:1/-1; text-align:center; padding:20px;">템플릿을 불러오는 중...</div>
+            </div>
+
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('uploadInput').click()">
+                <div class="icon">+</div>
+                <p>새 템플릿 업로드 (.pptx)</p>
+                <input type="file" id="uploadInput" accept=".pptx" style="display:none" onchange="uploadTemplate(this)">
+            </div>
+        </div>
+
+        <!-- 2. 주제 입력 -->
+        <form id="genForm" class="card">
+            <h2>2. 주제 및 세부 정보</h2>
+
+            <input type="hidden" name="template_source" id="templateSource">
+            <input type="hidden" name="template_filename" id="templateFilename">
+
+            <label class="required">주제</label>
+            <input name="topic" id="topicInput" required placeholder="예: 한국은행 신입 행원을 위한 4시간 AI 활용 교육">
+
+            <label>추가 지시사항</label>
+            <textarea name="extra_info" placeholder="예: 강사명은 홍길동으로 변경, 텍스트를 더 전문적인 용어로 작성해 주세요"></textarea>
+
+            <button type="submit" class="btn" id="submitBtn" disabled>템플릿을 먼저 선택해 주세요</button>
+        </form>
+
+        <!-- 3. 진행률 -->
+        <div class="card progress-section" id="progressSection">
+            <h2>생성 진행 중</h2>
+            <div class="progress-pct" id="progressPct">0%</div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="phase-text" id="phaseText">준비 중...</div>
+        </div>
+
+        <!-- 4. 결과 + 검증 -->
+        <div class="card result-section" id="resultSection">
+            <h2>완성 파일</h2>
+            <div class="result-info" id="resultInfo"></div>
+            <a class="download-btn" id="downloadBtn" href="#">PPTX 다운로드</a>
+            <button class="btn btn-secondary" onclick="toggleVerify()" style="width:auto; padding:10px 24px; margin-left:12px;">검증 비교 보기</button>
+            <button class="btn btn-secondary" onclick="resetForm()" style="width:auto; padding:10px 24px; margin-left:8px;">새로 만들기</button>
+
+            <div id="verifySection" style="display:none; margin-top:24px;">
+                <h3 style="color:#01696F; margin-bottom:12px;">원본 ↔ 결과 텍스트 비교</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div>
+                        <div style="font-weight:600; margin-bottom:8px; color:#888;">원본 템플릿</div>
+                        <pre id="verifyOriginal" style="background:#f5f5f5; padding:16px; border-radius:8px; font-size:12px; max-height:400px; overflow-y:auto; white-space:pre-wrap; border:1px solid #e0e0e0;"></pre>
+                    </div>
+                    <div>
+                        <div style="font-weight:600; margin-bottom:8px; color:#01696F;">생성 결과</div>
+                        <pre id="verifyResult" style="background:#F0FFF0; padding:16px; border-radius:8px; font-size:12px; max-height:400px; overflow-y:auto; white-space:pre-wrap; border:1px solid #c8e6c9;"></pre>
+                    </div>
+                </div>
+                <div id="verifyStats" style="margin-top:12px; font-size:13px; color:#666;"></div>
+            </div>
+        </div>
+
+        <!-- 에러 -->
+        <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <script>
+    let selectedTemplate = null;
+    let pollingInterval = null;
+
+    // 템플릿 목록 로드
+    async function loadTemplates() {
+        const resp = await fetch('/api/templates');
+        const list = await resp.json();
+        const grid = document.getElementById('templateGrid');
+        if (list.length === 0) {
+            grid.innerHTML = '<div style="color:#888; grid-column:1/-1; text-align:center; padding:20px;">등록된 템플릿이 없습니다. 위에서 업로드해 주세요.</div>';
+            return;
+        }
+        grid.innerHTML = list.map(t => `
+            <div class="template-card" data-source="${t.source}" data-filename="${t.filename}" onclick="selectTemplate(this)">
+                ${t.source === 'upload' ? `<button class="delete-btn" onclick="event.stopPropagation(); deleteTemplate('${t.source}','${t.filename}')" title="삭제">&times;</button>` : ''}
+                <div class="badge ${t.source === 'sample' ? 'badge-sample' : 'badge-upload'}">${t.source === 'sample' ? '기본 템플릿' : '업로드'}</div>
+                <div class="name">${t.name}</div>
+                <div class="meta">
+                    <span>${t.slide_count}장</span>
+                    <span>도형 ${t.shapes}개</span>
+                    ${t.tables > 0 ? `<span>표 ${t.tables}개</span>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function selectTemplate(el) {
+        document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedTemplate = { source: el.dataset.source, filename: el.dataset.filename };
+        document.getElementById('templateSource').value = selectedTemplate.source;
+        document.getElementById('templateFilename').value = selectedTemplate.filename;
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = false;
+        btn.textContent = '자동 채우기 시작';
+    }
+
+    async function uploadTemplate(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const form = new FormData();
+        form.append('file', file);
+        const resp = await fetch('/api/upload-template', { method: 'POST', body: form });
+        if (resp.ok) {
+            input.value = '';
+            loadTemplates();
+        }
+    }
+
+    async function deleteTemplate(source, filename) {
+        if (!confirm('이 템플릿을 삭제할까요?')) return;
+        await fetch(`/api/templates/${source}/${filename}`, { method: 'DELETE' });
+        loadTemplates();
+    }
+
+    // 폼 제출
+    document.getElementById('genForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!selectedTemplate) return alert('템플릿을 선택해 주세요');
+
+        const form = new FormData(e.target);
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('genForm').style.display = 'none';
+        document.getElementById('templateCard').style.display = 'none';
+        document.getElementById('progressSection').style.display = 'block';
+        document.getElementById('errorMsg').style.display = 'none';
+
+        const resp = await fetch('/api/start', { method: 'POST', body: form });
+        const data = await resp.json();
+
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+
+        currentJobId = data.job_id;
+        pollingInterval = setInterval(() => pollStatus(data.job_id), 2000);
+    });
+
+    async function pollStatus(jobId) {
+        const resp = await fetch(`/api/status/${jobId}`);
+        const data = await resp.json();
+
+        document.getElementById('progressPct').textContent = data.progress + '%';
+        document.getElementById('progressFill').style.width = data.progress + '%';
+        document.getElementById('phaseText').textContent = data.phase;
+
+        if (data.status === 'done') {
+            clearInterval(pollingInterval);
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+            document.getElementById('resultInfo').textContent = `주제: ${document.querySelector('[name=topic]').value}`;
+            document.getElementById('downloadBtn').href = `/api/download/${jobId}`;
+        } else if (data.status === 'error') {
+            clearInterval(pollingInterval);
+            showError(data.phase);
+        }
+    }
+
+    function showError(msg) {
+        document.getElementById('progressSection').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('errorMsg').textContent = msg;
+    }
+
+    let currentJobId = null;
+
+    async function toggleVerify() {
+        const section = document.getElementById('verifySection');
+        if (section.style.display !== 'none') {
+            section.style.display = 'none';
+            return;
+        }
+        if (!currentJobId) return;
+        const resp = await fetch(`/api/verify/${currentJobId}`);
+        const data = await resp.json();
+        document.getElementById('verifyOriginal').textContent = data.original || '(텍스트 없음)';
+        document.getElementById('verifyResult').textContent = data.result || '(텍스트 없음)';
+        document.getElementById('verifyStats').textContent = `슬라이드 수: ${data.slide_count_match}장`;
+        section.style.display = 'block';
+    }
+
+    function resetForm() {
+        document.getElementById('resultSection').style.display = 'none';
+        document.getElementById('genForm').style.display = 'block';
+        document.getElementById('templateCard').style.display = 'block';
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = '자동 채우기 시작';
+        document.getElementById('topicInput').value = '';
+        document.querySelector('[name=extra_info]').value = '';
+        loadTemplates();
+    }
+
+    // 초기화
+    loadTemplates();
+    </script>
+</body>
+</html>
