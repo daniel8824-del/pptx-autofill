@@ -88,18 +88,51 @@ async def delete_template(source: str, filename: str):
 
 
 def extract_file_text(file_path: str) -> str:
-    """업로드된 참고 파일에서 텍스트 추출 (markitdown 활용)"""
+    """업로드된 참고 파일에서 핵심 텍스트만 추출 (토큰 절약)"""
     try:
         from markitdown import MarkItDown
         md = MarkItDown()
         result = md.convert(file_path)
-        return result.text_content[:3000]  # 토큰 절약 (3000자 상한)
+        raw = result.text_content
     except Exception:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                return f.read()[:5000]
+                raw = f.read()
         except Exception:
             return ""
+
+    if not raw:
+        return ""
+
+    # 토큰 절약: 헤딩 + 표 + 리스트 우선, 긴 본문은 첫 문장만
+    lines = raw.split("\n")
+    kept = []
+    total = 0
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # 헤딩, 표, 리스트는 항상 포함
+        is_priority = (
+            stripped.startswith("#") or
+            stripped.startswith("|") or
+            stripped.startswith("- ") or
+            stripped.startswith("* ") or
+            stripped.startswith("1.") or
+            len(stripped) < 60  # 짧은 라벨/키워드
+        )
+        if is_priority:
+            kept.append(stripped)
+            total += len(stripped)
+        else:
+            # 긴 본문은 첫 80자만
+            kept.append(stripped[:80] + "..." if len(stripped) > 80 else stripped)
+            total += min(len(stripped), 83)
+
+        if total > 3000:
+            break
+
+    return "\n".join(kept)
 
 
 @app.post("/api/start")
