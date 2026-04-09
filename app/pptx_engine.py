@@ -48,11 +48,22 @@ def analyze_template(pptx_path: str) -> dict:
         slide_files = get_slide_files(pptx_path)
         for slide_name in slide_files:
             num = int(re.search(r'(\d+)', slide_name).group())
-            tree = ET.fromstring(z.read(slide_name))
+            raw_xml = z.read(slide_name)
+            tree = ET.fromstring(raw_xml)
             slide_info = {"number": num, "shapes": [], "tables": [], "images": []}
 
+            # 네임스페이스 자동 감지 (다양한 PPTX 도구 대응)
+            local_ns = dict(NS)
+            ns_matches = re.findall(r'xmlns:(\w+)="([^"]+)"', raw_xml.decode('utf-8', errors='ignore')[:3000])
+            if ns_matches:
+                for prefix, uri in ns_matches:
+                    if 'presentationml' in uri:
+                        local_ns['p'] = uri
+                    elif 'drawingml/2006/main' in uri:
+                        local_ns['a'] = uri
+
             # 도형 분석
-            for sp in tree.findall('.//p:sp', NS):
+            for sp in tree.findall('.//p:sp', local_ns):
                 cNvPr = sp.find('p:nvSpPr/p:cNvPr', NS)
                 if cNvPr is None:
                     continue

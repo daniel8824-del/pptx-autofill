@@ -212,6 +212,11 @@ async def run_pipeline(job_id: str):
         analysis = analyze_template(template_path)
         job["analysis"] = analysis
         job["original_text"] = get_markitdown_text(template_path)
+
+        # 도형 0개 감지 → markitdown 텍스트 기반 모드
+        total_shapes = sum(len(s["shapes"]) for s in analysis["slides"])
+        if total_shapes == 0:
+            job["phase"] = "도형 구조를 감지하지 못했습니다. 텍스트 기반으로 처리합니다..."
         job["progress"] = 20
 
         # Step 2: AI 콘텐츠 생성

@@ -49,6 +49,7 @@ async def generate_content_map(template_analysis: dict, markitdown_text: str,
                                 topic: str, extra_info: str = "") -> dict:
     """정밀 content_map 생성"""
     structured = build_structured_prompt(template_analysis)
+    total_shapes = sum(len(s["shapes"]) for s in template_analysis["slides"])
 
     system_prompt = """당신은 PPTX 템플릿 자동 채우기 전문가입니다.
 주어진 템플릿의 각 shape_id별 원본 텍스트를 분석하고, 새 주제에 맞는 교체 텍스트를 생성합니다.
@@ -83,11 +84,22 @@ async def generate_content_map(template_analysis: dict, markitdown_text: str,
 
 주의: shape_id가 숫자여도 문자열로 표기. 교체 불필요한 shape는 생략 가능."""
 
-    user_prompt = f"""## 템플릿 구조 (shape_id별 원본 텍스트)
+    # 도형 0개면 markitdown 텍스트를 주 데이터소스로 사용
+    if total_shapes == 0:
+        user_prompt = f"""## 템플릿 텍스트 (markitdown 추출 — 도형 구조 미감지)
+이 템플릿은 도형 ID를 감지하지 못했습니다. markitdown으로 추출한 텍스트를 기반으로
+각 슬라이드의 텍스트를 새 주제에 맞게 교체해 주세요.
+슬라이드 번호를 key로, shapes는 빈 dict로, 교체할 텍스트가 있으면 추정 shape id를 사용하세요.
+
+{markitdown_text[:4000]}"""
+    else:
+        user_prompt = f"""## 템플릿 구조 (shape_id별 원본 텍스트)
 {structured}
 
 ## markitdown 전체 텍스트 (참고용, 일부)
-{markitdown_text[:2000]}
+{markitdown_text[:2000]}"""
+
+    user_prompt += f"""
 
 ## 새 주제
 {topic}
