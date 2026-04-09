@@ -100,8 +100,10 @@
             <input name="topic" id="topicInput" required placeholder="예: 한국은행 신입 행원을 위한 4시간 AI 활용 교육">
 
             <label>참고 자료 업로드 (선택)</label>
-            <div class="file-upload-zone" onclick="document.getElementById('refFileInput').click()" style="margin-bottom:8px;">
-                <p style="font-size:13px;">Word, Excel, PDF, 텍스트 파일을 업로드하면 내용이 반영됩니다</p>
+            <div class="file-upload-zone" onclick="document.getElementById('refFileInput').click()" style="margin-bottom:8px; cursor:pointer; padding:20px; text-align:center;">
+                <div style="font-size:28px; color:#01696F; margin-bottom:8px;">+</div>
+                <div style="font-size:14px; font-weight:600; color:#01696F; margin-bottom:4px;">파일 선택</div>
+                <p style="font-size:12px; color:#999;">Word, Excel, PDF, 텍스트 — 클릭하여 업로드</p>
                 <input type="file" id="refFileInput" name="ref_files" multiple accept=".docx,.xlsx,.pdf,.txt,.csv,.hwp" style="display:none" onchange="showRefFiles(this)">
             </div>
             <div id="refFileList" style="margin-bottom:16px;"></div>
