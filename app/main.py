@@ -163,9 +163,9 @@ async def start_generation(
 
     # 참고 파일 저장 + 텍스트 추출
     ref_texts = []
+    ref_summaries = []
     for ref in ref_files:
         if ref and ref.filename and ref.size > 0:
-            ext = os.path.splitext(ref.filename)[1] or ".txt"
             ref_path = os.path.join(str(project_dir), f"ref_{ref.filename}")
             with open(ref_path, "wb") as f:
                 content = await ref.read()
@@ -173,6 +173,7 @@ async def start_generation(
             text = extract_file_text(ref_path)
             if text.strip():
                 ref_texts.append(f"[파일: {ref.filename}]\n{text}")
+                ref_summaries.append({"name": ref.filename, "chars": len(text)})
 
     ref_context = "\n\n".join(ref_texts) if ref_texts else ""
 
@@ -193,7 +194,7 @@ async def start_generation(
     }
 
     background_tasks.add_task(run_pipeline, job_id)
-    return {"job_id": job_id}
+    return {"job_id": job_id, "ref_summaries": ref_summaries}
 
 
 async def run_pipeline(job_id: str):

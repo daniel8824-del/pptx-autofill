@@ -261,6 +261,15 @@
         }
 
         currentJobId = data.job_id;
+
+        // 참고 파일 추출 결과 표시
+        if (data.ref_summaries && data.ref_summaries.length > 0) {
+            const refInfo = data.ref_summaries.map(r =>
+                r.name + ' → 핵심 ' + r.chars.toLocaleString() + '자 추출'
+            ).join('\n');
+            document.getElementById('phaseText').textContent = refInfo;
+        }
+
         pollingInterval = setInterval(() => pollStatus(data.job_id), 2000);
     });
 
