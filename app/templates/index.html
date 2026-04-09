@@ -104,19 +104,29 @@
             <input type="hidden" name="template_source" id="templateSource">
             <input type="hidden" name="template_filename" id="templateFilename">
 
-            <label class="required">주제</label>
-            <input name="topic" id="topicInput" required placeholder="예: 한국은행 신입 행원을 위한 4시간 AI 활용 교육">
-
-            <label>참고 자료 업로드 <span style="font-weight:400; color:#999;">(선택)</span></label>
-            <div class="file-upload-zone">
-                <button type="button" class="file-add-btn" onclick="document.getElementById('refFileInput').click()">+ 파일 추가</button>
-                <span style="font-size:12px; color:#999; margin-left:8px;">Word, Excel, PDF, 텍스트</span>
-                <input type="file" id="refFileInput" name="ref_files" multiple accept=".docx,.xlsx,.pdf,.txt,.csv,.hwp" style="display:none" onchange="showRefFiles(this)">
-                <div id="refFileList" class="file-list"></div>
+            <!-- 주제 섹션 -->
+            <div style="margin-bottom:28px;">
+                <label class="required" style="font-size:15px; margin-bottom:8px;">주제</label>
+                <input name="topic" id="topicInput" required placeholder="예: 한국은행 신입 행원을 위한 4시간 AI 활용 교육" style="padding:12px 16px; font-size:15px;">
             </div>
 
-            <label>추가 지시사항</label>
-            <textarea name="extra_info" placeholder="예: 강사명은 홍길동으로 변경, 텍스트를 더 전문적인 용어로 작성해 주세요"></textarea>
+            <!-- 참고 자료 섹션 -->
+            <div style="margin-bottom:28px; background:#f8fafa; border:1px solid #e0e8e8; border-radius:10px; padding:20px;">
+                <label style="font-size:15px; margin-bottom:10px;">참고 자료 업로드 <span style="font-weight:400; color:#999; font-size:13px;">(선택)</span></label>
+                <p style="font-size:13px; color:#888; margin-bottom:12px;">강사 이력서, 커리큘럼 표, 회사 소개서 등을 업로드하면 AI가 내용을 반영합니다</p>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button type="button" class="file-add-btn" onclick="document.getElementById('refFileInput').click()" style="padding:8px 20px; font-size:14px;">+ 파일 추가</button>
+                    <span style="font-size:12px; color:#aaa;">Word, Excel, PDF, 텍스트</span>
+                </div>
+                <input type="file" id="refFileInput" name="ref_files" multiple accept=".docx,.xlsx,.pdf,.txt,.csv,.hwp" style="display:none" onchange="showRefFiles(this)">
+                <div id="refFileList" class="file-list" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- 추가 지시사항 섹션 -->
+            <div style="margin-bottom:24px;">
+                <label style="font-size:15px; margin-bottom:8px;">추가 지시사항</label>
+                <textarea name="extra_info" placeholder="예: 강사명은 홍길동으로 변경, 텍스트를 더 전문적인 용어로 작성해 주세요" style="padding:12px 16px; font-size:14px; min-height:100px;"></textarea>
+            </div>
 
             <button type="submit" class="btn" id="submitBtn" disabled>템플릿을 먼저 선택해 주세요</button>
         </form>
